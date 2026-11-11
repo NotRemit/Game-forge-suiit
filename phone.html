@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tokyo PD Handheld Terminal</title>
     <link rel="stylesheet" href="phone.css">
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
     <!-- Top Status Bar -->
@@ -32,17 +33,12 @@
                 <div class="info-line"><span>LINK STATUS:</span> <b id="connection-status-text" class="status-connected">ONLINE &amp; PAIRED</b></div>
                 <div class="info-line"><span>ENCRYPTION:</span> <b>AES-256 GCM</b></div>
                 <div class="info-line"><span>TARGET DESKTOP:</span> <b id="target-workstation-text">STATION #4 (ADMIN)</b></div>
-                <div class="info-line"><span>SENSORS:</span> <b class="sensor-active">ACCEL • GYRO • VIB</b></div>
+                <div class="info-line"><span>FREQUENCY:</span> <b class="sensor-active">433.92 MHz CARRIER</b></div>
             </div>
 
             <div class="standby-notice">
                 <p>Keep this device nearby while investigating on your computer workstation.</p>
                 <p class="blink">● MONITORING CARRIER FREQUENCIES...</p>
-            </div>
-
-            <!-- Manual Test Triggers for desktop testing -->
-            <div class="debug-controls">
-                <button class="debug-btn" onclick="simulateCall1()">Simulate Incoming Call</button>
             </div>
         </div>
 
@@ -97,82 +93,73 @@
             </div>
         </div>
 
-        <!-- Screen 4: Static Glitch & Shake Screen -->
+        <!-- Screen 4: Static Glitch & Resonance Riddle Screen -->
         <div id="screen-shake-reconnect" class="screen-view hidden">
             <div class="static-overlay"></div>
             <div class="alert-box">
                 <div class="warning-icon blink">⚠️</div>
-                <h2 class="alert-title">CARRIER OVERLOAD!</h2>
-                <p class="alert-subtitle">SIGNAL COMPROMISED BY REMOTE ATTACK</p>
+                <h2 class="alert-title">CARRIER SEVERED</h2>
+                <p class="alert-subtitle">RESONANCE DRIFT DETECTED • BUFFER FROZEN</p>
             </div>
 
-            <div class="shake-instruction-card">
-                <div class="shake-icon-anim">📱💨</div>
-                <h3>SHAKE PHONE VIGOROUSLY</h3>
-                <p>Shake your physical device to clear the static and force emergency carrier reconnection!</p>
+            <div class="shake-instruction-card" onclick="registerHiddenTap()">
+                <div class="shake-icon-anim">⚡</div>
+                <div class="instruction-title">ANOMALY DETECTED</div>
+                <div class="riddle-quote" style="margin-top: 10px;">
+                    "The mercury inside has settled into ice.<br>
+                    A dead bell tolls for no one.<br>
+                    Agitate this vessel... awaken the tremor within,<br>
+                    or remain stranded in the static."
+                </div>
                 
-                <div class="progress-container">
+                <div class="progress-container" style="margin-top: 20px;">
                     <div id="shake-progress-bar" class="progress-bar" style="width: 0%;"></div>
                 </div>
-                <div class="progress-label"><span id="shake-percent-text">0</span>% FREQUENCY RE-SYNCED</div>
+                <div class="progress-label">SIGNAL COHERENCE: <span id="shake-percent-text">0</span>%</div>
             </div>
-
-            <!-- Fallback for desktop browser emulator -->
-            <button class="manual-tap-btn" onclick="registerManualShake()">
-                📱 Tap Rapidly (Manual Shake Fallback)
-            </button>
         </div>
 
-        <!-- Screen 5: Call 2 Active Screen (Hold to Ear with Riddle) -->
+        <!-- Screen 5: Call 2 Active Screen (Whisper Riddle) -->
         <div id="screen-call2-ear" class="screen-view hidden">
             <div class="call-active-header">
-                <div class="ear-indicator-box">
-                    <div id="ear-status-badge" class="ear-badge away">🔴 FAR FROM EAR (SCRAMBLED)</div>
-                    <div id="ear-tilt-value" class="tilt-readout">TILT: 0° (FLAT)</div>
+                <div class="speaker-wave-container" style="width: 80px; height: 80px;">
+                    <div class="wave wave1"></div>
+                    <div class="center-speaker">🔒</div>
                 </div>
                 <h2 class="caller-name">ENCRYPTED WHISPER</h2>
                 <div id="call2-timer" class="call-duration">00:02</div>
             </div>
 
-            <div class="ear-instruction-card" onclick="toggleEarSimulation()" style="cursor: pointer;">
-                <div class="ear-anim-icon">👂📱</div>
-                <div id="call2-hint-title" class="instruction-title">VOICE RIDDLE:</div>
+            <div class="ear-instruction-card" onclick="toggleSecretEar()">
+                <div class="ear-anim-icon">👁️</div>
+                <div id="call2-hint-title" class="instruction-title">THE UNKNOWN'S PROVERB</div>
                 <div id="call2-riddle-text" class="riddle-quote">
-                    "Secrets cannot be shouted into the room... Bring this phone close to your ear."
+                    "You broadcast my voice to empty walls... foolish.<br>
+                    A secret is not a bell to be rung in open air.<br>
+                    Press this shell where thoughts enter in the dark,<br>
+                    against the chamber of your mind...<br>
+                    and only then shall the shadow speak."
                 </div>
 
                 <div id="audio-clarity-status" class="clarity-status scrambled">
-                    🔊 AUDIO SCRAMBLED: Hold phone vertically against ear to decrypt!
+                    ~ ~ SCRAMBLED FREQUENCY HISS ~ ~
                 </div>
-                <div style="font-size: 10px; color: #888; margin-top: 8px;">(Tilt vertically or tap screen to decrypt)</div>
             </div>
-
-            <div id="code-reveal-card" class="code-reveal-card hidden">
-                <div class="reveal-label">EMERGENCY OVERRIDE KEY DETECTED:</div>
-                <div class="revealed-code">SHADOW7743</div>
-                <div class="reveal-hint">Type this into your locked PC workstation to restore access!</div>
-            </div>
-
-            <!-- Desktop simulation toggle -->
-            <button id="toggle-ear-simulation-btn" class="manual-tap-btn" onclick="toggleEarSimulation()">
-                Simulate "Hold to Ear" (For Desktop Testing)
-            </button>
 
             <div class="call-actions single">
                 <button class="call-btn decline full" onclick="hangupCall2()">
                     <span class="btn-icon">🔴</span>
-                    <span class="btn-label">Hang Up &amp; Unlock PC</span>
+                    <span class="btn-label">Terminate Link</span>
                 </button>
             </div>
         </div>
 
         <!-- Screen 6: System Restored Screen -->
         <div id="screen-restored" class="screen-view hidden">
-            <div class="restored-badge">✓ SYSTEM RECOVERY SUCCESSFUL</div>
+            <div class="restored-badge">✓ FREQUENCY CLEARED</div>
             <div class="success-icon">🛡️</div>
-            <h2>INTRUSION BYPASS ACTIVE</h2>
-            <p>Your PC workstation has restored access. Enter the override code on your computer screen to resume Phase 2 investigation.</p>
-            <div class="override-pill">OVERRIDE CODE: <b>SHADOW7743</b></div>
+            <h2>SIGNAL DISCONNECTED</h2>
+            <p>The transmission has ended. Return to your workstation and enter the cipher spoken by the caller.</p>
             <button class="return-standby-btn" onclick="returnToStandby()">Back to Terminal Standby</button>
         </div>
 
@@ -182,4 +169,3 @@
     <script src="phone.js"></script>
 </body>
 </html>
-

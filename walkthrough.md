@@ -40,16 +40,18 @@ As soon as you attempt to investigate official police files by opening any appli
 2. **The 5-Second Shutdown & PC Lockdown:**
    * Exactly 5 seconds after hanging up, your PC monitor flickers into a critical **Remote Takeover / Lockdown Screen** (`CRITICAL SECURITY BREACH: TERMINAL ACCESS SUSPENDED`).
    * The computer demands an emergency recovery key.
-3. **Carrier Signal Lost (Shake Sensor):**
-   * Simultaneously, your phone screen corrupts with digital static (`CARRIER OVERLOAD`).
-   * **Shake your physical phone vigorously** back and forth (using your device's accelerometer) until the frequency buffer reaches 100%.
-4. **The Second Call (Hold to Ear with Riddle):**
+3. **Carrier Signal Lost (Resonance Riddle):**
+   * Simultaneously, your phone screen corrupts with digital static (`CARRIER SEVERED`).
+   * The terminal presents an anomaly riddle:
+     > *"The mercury inside has settled into ice. A dead bell tolls for no one. Agitate this vessel... awaken the tremor within, or remain stranded in the static."*
+   * **Agitate/Shake your phone** until the signal coherence reaches 100%.
+4. **The Second Call (Acoustic Confinement Riddle):**
    * Once re-synced, an encrypted transmission rings your phone (`ENCRYPTED WHISPER`).
-   * Answer the call. The voice presents a riddle:
-     > *"Can't hear me over the static? Secrets are not shouted into the room... Bring this phone close to your ear."*
-   * **Hold the phone vertically against your ear** (using your phone's gyroscope / tilt sensor).
-   * As soon as the device detects ear proximity, the static disappears and the caller clearly whispers the emergency override code:
-     > **`SHADOW7743`**
+   * Answer the call. The voice recites a cryptic proverb amidst static:
+     > *"You broadcast my voice to empty walls... foolish. A secret is not a bell to be rung in open air. Press this shell where thoughts enter in the dark, against the chamber of your mind... and only then shall the shadow speak."*
+   * **Raise the phone vertically against your ear** (aligning the device's acoustic angle).
+   * As soon as acoustic proximity is engaged, the static silences completely and the caller clearly whispers the emergency override code directly into your ear:
+     > **`SHADOW7743`** *(The code is never displayed on screen — listen closely!)*
 5. **Restoring the PC Workstation:**
    * Type `SHADOW7743` into the locked PC monitor and click **RECOVER SYSTEM**.
    * The intrusion backdoor is purged, and full access to your Windows XP workstation is restored.

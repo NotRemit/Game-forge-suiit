@@ -1419,6 +1419,55 @@ let hackerCallEnded = false;
 let pcLockdownActive = false;
 let countdownTimer = null;
 
+// Unique Game Session for P2P connection (works on Vercel without a backend)
+let gameSessionId = localStorage.getItem('scribe_game_session');
+if (!gameSessionId) {
+    gameSessionId = Math.random().toString(36).substring(2, 8);
+    localStorage.setItem('scribe_game_session', gameSessionId);
+}
+
+let pcPeer = null;
+let activePeerConn = null;
+
+function initPeerP2P() {
+    if (typeof Peer === 'undefined') return;
+    try {
+        const myPeerId = 'sigil-' + gameSessionId;
+        pcPeer = new Peer(myPeerId);
+
+        pcPeer.on('open', (id) => {
+            console.log('PC P2P Host ready, ID:', id);
+        });
+
+        pcPeer.on('connection', (conn) => {
+            activePeerConn = conn;
+            activePeerConn.on('open', () => {
+                updateConnectionUI(true);
+            });
+            activePeerConn.on('data', (data) => {
+                handlePCEventSync(data);
+            });
+            activePeerConn.on('close', () => {
+                updateConnectionUI(false);
+            });
+        });
+    } catch (e) {
+        console.warn('PeerJS init error:', e);
+    }
+}
+
+function getDirectPhoneUrl() {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocal) {
+        // Vercel, Netlify, custom domain, production HTTPS:
+        // window.location.origin is clean https://your-app.vercel.app with NO port 8000!
+        return `${window.location.origin}/phone.html`;
+    }
+    // Localhost dev:
+    const port = window.location.port ? `:${window.location.port}` : ':8000';
+    return `http://${window.location.hostname}${port}/phone.html`;
+}
+
 function initMobileSync() {
     // Setup Enter key for lockdown recovery input
     const overrideInput = document.getElementById('override-code-input');
@@ -1443,35 +1492,45 @@ function initMobileSync() {
         }
     });
 
-    // Start background polling to relay server
+    // Start background polling to relay server (for local Python server)
     setInterval(pollStateFromServer, 700);
 
-    // Initial IP and pairing check
-    fetch('/api/ip')
-        .then(res => res.json())
-        .then(data => {
-            setupQRDisplay(data.phone_url, data.phone_connected);
-        })
-        .catch(() => {
-            const host = window.location.hostname || 'localhost';
-            const port = window.location.port || '8000';
-            setupQRDisplay(`http://${host}:${port}/phone.html`, false);
-        });
+    // Initialize WebRTC P2P (for Vercel serverless)
+    initPeerP2P();
+
+    // Initial pairing check & display
+    loadPairingUrl();
 }
 
 function showConnectionScreen() {
     const connScreen = document.getElementById('connect-screen');
     if (connScreen) connScreen.classList.remove('hidden');
 
+    loadPairingUrl();
+}
+
+function loadPairingUrl() {
     fetch('/api/ip')
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) throw new Error('Not local server');
+            return res.json();
+        })
         .then(data => {
-            setupQRDisplay(data.phone_url, data.phone_connected);
+            let targetUrl = data.phone_url;
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+            if (!isLocal) {
+                // Production / Vercel: Always use direct clean origin without port 8000
+                targetUrl = `${window.location.origin}/phone.html`;
+            }
+
+            const sep = targetUrl.includes('?') ? '&' : '?';
+            setupQRDisplay(`${targetUrl}${sep}session=${gameSessionId}`, data.phone_connected);
         })
         .catch(() => {
-            const host = window.location.hostname || 'localhost';
-            const port = window.location.port || '8000';
-            setupQRDisplay(`http://${host}:${port}/phone.html`, false);
+            // Vercel / Static hosting fallback: direct clean origin URL
+            const targetUrl = `${getDirectPhoneUrl()}?session=${gameSessionId}`;
+            setupQRDisplay(targetUrl, false);
         });
 }
 
@@ -1591,16 +1650,23 @@ function handlePCEventSync(eventData) {
 }
 
 function emitSyncAction(actionName, extra = {}) {
-    const payload = { action: actionName, timestamp: Date.now(), ...extra };
+    const payload = { action: actionName, event: actionName, timestamp: Date.now(), ...extra };
 
+    // 1. Post to Server Relay (if local server running)
     fetch('/api/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     }).catch(() => {});
 
+    // 2. Direct P2P Channel (for Vercel without a backend)
+    if (activePeerConn && activePeerConn.open) {
+        activePeerConn.send(payload);
+    }
+
+    // 3. Local BroadcastChannel
     if (syncBroadcast) {
-        syncBroadcast.postMessage({ event: actionName, ...extra });
+        syncBroadcast.postMessage(payload);
     }
     localStorage.setItem('scribe_sigil_event', JSON.stringify({ event: actionName, t: Date.now(), ...extra }));
 }
@@ -1613,8 +1679,8 @@ function checkTriggerPhase2Call(appName) {
     emitSyncAction('TRIGGER_CALL_1', { app: appName });
 
     showHint(
-        '⚠️ INCOMING WIRELESS INTERCEPT: An urgent restricted call has been routed to your connected mobile terminal! Answer it now.',
-        'ENCRYPTED WIRELESS CALL'
+        '⚠️ FREQUENCY INTERCEPT: Unknown external carrier detected on field device.',
+        'CARRIER INTERCEPT'
     );
 }
 
@@ -1624,8 +1690,8 @@ function onCall1Ended() {
     hackerCallEnded = true;
 
     showHint(
-        '⚠️ CRITICAL THREAT: Remote caller terminated link. Malicious exploit payload deploying! System lockdown in 5 seconds...',
-        'REMOTE INTRUSION WARNING'
+        '⚠️ CARRIER LOSS: Remote host connection severed. System lockdown imminent in 5 seconds...',
+        'SECURITY ALERT'
     );
 
     let secondsLeft = 5;

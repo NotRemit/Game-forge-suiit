@@ -149,15 +149,28 @@ function startStaticAudio(volume = 0.15) {
 }
 
 function adjustStaticVolume(volume) {
+    if (volume <= 0.01) {
+        stopStaticAudio();
+        return;
+    }
     if (staticGain && audioCtx) {
-        staticGain.gain.linearRampToValueAtTime(volume, audioCtx.currentTime + 0.2);
+        try {
+            staticGain.gain.cancelScheduledValues(audioCtx.currentTime);
+            staticGain.gain.linearRampToValueAtTime(volume, audioCtx.currentTime + 0.15);
+        } catch (e) {}
     }
 }
 
 function stopStaticAudio() {
+    if (staticGain && audioCtx) {
+        try {
+            staticGain.gain.cancelScheduledValues(audioCtx.currentTime);
+            staticGain.gain.setValueAtTime(0, audioCtx.currentTime);
+        } catch (e) {}
+    }
     if (staticNode) {
         try { staticNode.stop(); } catch (e) {}
-        staticNode.disconnect();
+        try { staticNode.disconnect(); } catch (e) {}
         staticNode = null;
     }
 }
@@ -208,6 +221,11 @@ function speakMessage(text, pitch = 0.6, rate = 0.85, onEndCallback = null) {
 
 // Screen Routing
 function switchScreen(screenId) {
+    // If leaving the static puzzle screens, kill all hissing audio immediately
+    if (screenId !== 'screen-shake-reconnect' && screenId !== 'screen-call2-ear') {
+        stopStaticAudio();
+    }
+
     document.querySelectorAll('.screen-view').forEach(el => {
         el.classList.remove('active');
         el.classList.add('hidden');
@@ -283,8 +301,8 @@ function updateShakeUI() {
     if (text) text.textContent = Math.round(STATE.shakeProgress);
 }
 
-function registerManualShake() {
-    registerShakeEnergy(25);
+function registerHiddenTap() {
+    registerShakeEnergy(20);
 }
 
 function onShakeCompleted() {
@@ -302,30 +320,19 @@ function onShakeCompleted() {
     }, 1200);
 }
 
-// Orientation Handler: Hold to Ear (DeviceOrientation)
+// Orientation Handler: Tilt / Acoustic Proximity
 function handleOrientation(event) {
     if (STATE.activeScreen !== 'screen-call2-ear') return;
 
     const beta = event.beta; // Tilt front-to-back [-180, 180]
-    const gamma = event.gamma; // Tilt left-to-right [-90, 90]
 
-    const tiltValEl = document.getElementById('ear-tilt-value');
-    if (tiltValEl && beta !== null) {
-        tiltValEl.textContent = `TILT: ${Math.round(beta)}°`;
-    }
-
-    // Phone held upright near ear: beta is typically between 55° and 115°
+    // Phone held upright against ear: beta is typically between 55° and 115°
     const isUpright = (beta !== null && beta >= 55 && beta <= 115);
     setEarState(isUpright || STATE.simulatedEar);
 }
 
-function toggleEarSimulation() {
+function toggleSecretEar() {
     STATE.simulatedEar = !STATE.simulatedEar;
-    const btn = document.getElementById('toggle-ear-simulation-btn');
-    if (btn) {
-        btn.textContent = STATE.simulatedEar ? 'Toggle Ear: AT EAR (Simulated)' : 'Simulate "Hold to Ear" (For Desktop Testing)';
-        btn.style.borderColor = STATE.simulatedEar ? 'var(--accent-green)' : 'rgba(255,255,255,0.2)';
-    }
     setEarState(STATE.simulatedEar);
 }
 
@@ -333,46 +340,31 @@ function setEarState(isNearEar) {
     if (STATE.isHeldToEar === isNearEar) return;
     STATE.isHeldToEar = isNearEar;
 
-    const badge = document.getElementById('ear-status-badge');
     const clarity = document.getElementById('audio-clarity-status');
-    const revealCard = document.getElementById('code-reveal-card');
 
     if (isNearEar) {
-        // EAR POSITION ACTIVE: Decrypt audio, silence static
-        if (badge) {
-            badge.className = 'ear-badge near';
-            badge.textContent = '🟢 AT EAR (DECRYPTED)';
-        }
+        // PROXIMITY ENGAGED: Decrypt audio, completely stop static hiss
         if (clarity) {
             clarity.className = 'clarity-status clear';
-            clarity.innerHTML = '✓ AUDIO DECRYPTED: Listening to confidential whisper...';
-        }
-        if (revealCard) {
-            revealCard.classList.remove('hidden');
+            clarity.innerHTML = '● ACOUSTIC PROXIMITY ENGAGED — LISTENING';
         }
 
-        // Mute static, boost speech
-        adjustStaticVolume(0.01);
+        stopStaticAudio();
         if (navigator.vibrate) navigator.vibrate(100);
 
-        // Speak the secret code clearly
+        // Whisper secret code into player's ear (NO visual text on screen)
         speakMessage(
-            "The emergency override key is: SHADOW7743. I repeat: S-H-A-D-O-W-7-7-4-3. Type it into your terminal, or stay locked in the dark.",
+            "Good. You have learned how to listen. The key cast into the dark is: SHADOW7743. I repeat: S-H-A-D-O-W-7-7-4-3. Enter it into your workstation... and consider this your final mercy.",
             0.55,
             0.8
         );
     } else {
-        // AWAY FROM EAR: Scrambled static
-        if (badge) {
-            badge.className = 'ear-badge away';
-            badge.textContent = '🔴 FAR FROM EAR (SCRAMBLED)';
-        }
+        // DISPERSED: Scrambled static
         if (clarity) {
             clarity.className = 'clarity-status scrambled';
-            clarity.innerHTML = '🔊 AUDIO SCRAMBLED: Hold phone vertically against ear to decrypt!';
+            clarity.innerHTML = '~ ~ SCRAMBLED FREQUENCY HISS ~ ~';
         }
 
-        // Turn static loud
         adjustStaticVolume(0.25);
         if (speechUtterance && window.speechSynthesis) {
             window.speechSynthesis.cancel();
@@ -466,7 +458,7 @@ function startCall2() {
     startStaticAudio(0.25);
 
     // Initial voice riddle (telling player to hold phone to ear)
-    const riddle = "Can't hear me over the static? Secrets are not shouted into the room... Bring this phone close to your ear.";
+    const riddle = "You broadcast my voice into open air... foolish. A secret is not a bell to be rung in public. Press this vessel where thoughts enter in darkness, against the chamber of your mind... and only then shall the shadow speak.";
     speakMessage(riddle, 0.6, 0.85);
 }
 
@@ -481,6 +473,10 @@ function hangupCall2() {
 }
 
 function returnToStandby() {
+    stopCallTimer();
+    stopStaticAudio();
+    stopRingtone();
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     switchScreen('screen-standby');
 }
 
@@ -507,8 +503,11 @@ function stopCallTimer() {
 }
 
 // -------------------------------------------------------------------
-// Synchronization & Server Relay
+// Synchronization & Server / P2P Relay
 // -------------------------------------------------------------------
+let phonePeer = null;
+let phonePeerConn = null;
+
 function initSync() {
     if (broadcastChannel) {
         broadcastChannel.onmessage = (event) => {
@@ -523,6 +522,39 @@ function initSync() {
             } catch (err) {}
         }
     });
+
+    initPhonePeerP2P();
+}
+
+function initPhonePeerP2P() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const session = urlParams.get('session');
+    if (!session || typeof Peer === 'undefined') return;
+
+    try {
+        phonePeer = new Peer();
+        phonePeer.on('open', () => {
+            const targetPeerId = 'sigil-' + session;
+            phonePeerConn = phonePeer.connect(targetPeerId);
+
+            phonePeerConn.on('open', () => {
+                const statusEl = document.getElementById('connection-status-text');
+                if (statusEl) {
+                    statusEl.className = 'status-connected';
+                    statusEl.textContent = 'ONLINE & PAIRED (P2P)';
+                }
+                phonePeerConn.send({ action: 'PHONE_PING' });
+            });
+
+            phonePeerConn.on('data', (data) => {
+                handleSyncEvent(data);
+            });
+        });
+
+        phonePeer.on('error', (err) => {
+            console.warn('Phone P2P warning:', err);
+        });
+    } catch (e) {}
 }
 
 function sendHeartbeat() {
@@ -531,6 +563,10 @@ function sendHeartbeat() {
         headers: { 'Content-Type': 'application/json', 'Bypass-Tunnel-Reminder': 'true' },
         body: JSON.stringify({ action: 'PHONE_PING' })
     }).catch(() => {});
+
+    if (phonePeerConn && phonePeerConn.open) {
+        phonePeerConn.send({ action: 'PHONE_PING' });
+    }
 }
 
 function pollServerState() {
@@ -567,48 +603,59 @@ function handleServerState(state) {
         triggerIncomingCall(2);
     }
 
-    // PC Unlocked
-    if (state.pc_recovered && (STATE.activeScreen === 'screen-call2-ear' || STATE.activeScreen === 'screen-shake-reconnect')) {
-        switchScreen('screen-restored');
+    // PC Unlocked -> Stop static hissing and recover
+    if (state.pc_recovered) {
+        stopStaticAudio();
+        stopRingtone();
+        stopCallTimer();
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        if (STATE.activeScreen === 'screen-call2-ear' || STATE.activeScreen === 'screen-shake-reconnect') {
+            switchScreen('screen-restored');
+        }
     }
 }
 
 function handleSyncEvent(eventData) {
-    if (!eventData || !eventData.event) return;
+    if (!eventData) return;
+    const evt = eventData.event || eventData.action;
 
-    if (eventData.event === 'TRIGGER_CALL_1' && STATE.activeScreen === 'screen-standby') {
+    if (evt === 'TRIGGER_CALL_1' && STATE.activeScreen === 'screen-standby') {
         triggerIncomingCall(1);
-    } else if (eventData.event === 'PC_LOCKED') {
+    } else if (evt === 'PC_LOCKED' || evt === 'LOCK_PC') {
         STATE.shakeProgress = 0;
         updateShakeUI();
         startStaticAudio(0.3);
         switchScreen('screen-shake-reconnect');
-    } else if (eventData.event === 'PC_UNLOCKED') {
+    } else if (evt === 'PC_UNLOCKED' || evt === 'UNLOCK_PC') {
+        stopStaticAudio();
+        stopRingtone();
+        stopCallTimer();
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
         switchScreen('screen-restored');
     }
 }
 
 function emitAction(actionName, extra = {}) {
-    const payload = { action: actionName, timestamp: Date.now(), ...extra };
+    const payload = { action: actionName, event: actionName, timestamp: Date.now(), ...extra };
 
-    // 1. Post to Server Relay
+    // 1. Post to Server Relay (if server is present)
     fetch('/api/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Bypass-Tunnel-Reminder': 'true' },
         body: JSON.stringify(payload)
     }).catch(() => {});
 
-    // 2. Local BroadcastChannel (for same browser tabs)
-    if (broadcastChannel) {
-        broadcastChannel.postMessage({ event: actionName, ...extra });
+    // 2. Direct P2P Channel (for Vercel without a server)
+    if (phonePeerConn && phonePeerConn.open) {
+        phonePeerConn.send(payload);
     }
 
-    // 3. LocalStorage fallback
+    // 3. Local BroadcastChannel (for same browser tabs)
+    if (broadcastChannel) {
+        broadcastChannel.postMessage(payload);
+    }
+
+    // 4. LocalStorage fallback
     localStorage.setItem('scribe_sigil_event', JSON.stringify({ event: actionName, t: Date.now(), ...extra }));
 }
-
-// Debug / Simulation Helper
-window.simulateCall1 = function() {
-    triggerIncomingCall(1);
-};
 
