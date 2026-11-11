@@ -1419,13 +1419,104 @@ let hackerCallEnded = false;
 let pcLockdownActive = false;
 let countdownTimer = null;
 
+// ===================================================================
+// Cloud Relay (MQTT over Secure WebSocket) - Zero Backend / Vercel
+// ===================================================================
+class CloudRelay {
+    constructor(sessionId, role, onMessage, onStatusChange) {
+        this.sessionId = (sessionId || 'sigil_default').toLowerCase().trim();
+        this.role = role; // 'pc' or 'phone'
+        this.onMessage = onMessage;
+        this.onStatusChange = onStatusChange;
+        this.client = null;
+        this.connected = false;
+        this.brokers = [
+            { host: 'broker.hivemq.com', port: 8884, path: '/mqtt' },
+            { host: 'broker.emqx.io', port: 8084, path: '/mqtt' }
+        ];
+        this.brokerIdx = 0;
+        this.subTopic = this.role === 'pc' ? `sigil/${this.sessionId}/to_pc` : `sigil/${this.sessionId}/to_phone`;
+        this.pubTopic = this.role === 'pc' ? `sigil/${this.sessionId}/to_phone` : `sigil/${this.sessionId}/to_pc`;
+        this.connect();
+    }
+
+    connect() {
+        if (typeof Paho === 'undefined' || !Paho.MQTT) {
+            setTimeout(() => this.connect(), 1500);
+            return;
+        }
+        const b = this.brokers[this.brokerIdx];
+        const clientId = `sigil_${this.role}_${Math.random().toString(36).substring(2, 9)}`;
+        try {
+            this.client = new Paho.MQTT.Client(b.host, b.port, b.path, clientId);
+            this.client.onConnectionLost = (resp) => {
+                this.connected = false;
+                if (this.onStatusChange) this.onStatusChange(false);
+                if (resp && resp.errorCode !== 0) {
+                    console.log(`[CloudRelay] ${this.role} lost connection:`, resp.errorMessage);
+                    this.brokerIdx = (this.brokerIdx + 1) % this.brokers.length;
+                    setTimeout(() => this.connect(), 2000);
+                }
+            };
+            this.client.onMessageArrived = (message) => {
+                try {
+                    const data = JSON.parse(message.payloadString);
+                    if (this.onMessage) this.onMessage(data);
+                } catch (e) {
+                    console.warn(`[CloudRelay] ${this.role} parse error:`, e);
+                }
+            };
+            this.client.connect({
+                useSSL: true,
+                timeout: 5,
+                keepAliveInterval: 30,
+                cleanSession: true,
+                onSuccess: () => {
+                    this.connected = true;
+                    this.client.subscribe(this.subTopic, {
+                        onSuccess: () => {
+                            console.log(`[CloudRelay] ${this.role} subscribed to ${this.subTopic}`);
+                            if (this.onStatusChange) this.onStatusChange(true);
+                        }
+                    });
+                },
+                onFailure: (err) => {
+                    this.connected = false;
+                    if (this.onStatusChange) this.onStatusChange(false);
+                    console.warn(`[CloudRelay] ${this.role} connect failed to ${b.host}:`, err);
+                    this.brokerIdx = (this.brokerIdx + 1) % this.brokers.length;
+                    setTimeout(() => this.connect(), 2500);
+                }
+            });
+        } catch (e) {
+            setTimeout(() => this.connect(), 3000);
+        }
+    }
+
+    send(data) {
+        if (!this.client || !this.connected) return false;
+        try {
+            const payload = typeof data === 'string' ? data : JSON.stringify(data);
+            const msg = new Paho.MQTT.Message(payload);
+            msg.destinationName = this.pubTopic;
+            this.client.send(msg);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+}
+
 // Unique Game Session for P2P connection (works on Vercel without a backend)
 let gameSessionId = localStorage.getItem('scribe_game_session');
 if (!gameSessionId) {
-    gameSessionId = Math.random().toString(36).substring(2, 8);
+    gameSessionId = Math.random().toString(36).substring(2, 8).toLowerCase();
     localStorage.setItem('scribe_game_session', gameSessionId);
+} else {
+    gameSessionId = gameSessionId.toLowerCase().trim();
 }
 
+let cloudRelay = null;
 let pcPeer = null;
 let activePeerConn = null;
 
@@ -1492,6 +1583,13 @@ function initMobileSync() {
         }
     });
 
+    // Cloud Relay for cross-network Vercel synchronization
+    cloudRelay = new CloudRelay(gameSessionId, 'pc', (eventData) => {
+        handlePCEventSync(eventData);
+    }, (connected) => {
+        console.log('[PC CloudRelay] status:', connected);
+    });
+
     // Start background polling to relay server (for local Python server)
     setInterval(pollStateFromServer, 700);
 
@@ -1547,6 +1645,16 @@ function setupQRDisplay(url, isConnected) {
     if (modalLink) {
         modalLink.textContent = url;
         modalLink.href = url;
+    }
+
+    const codeVal = document.getElementById('session-code-val');
+    if (codeVal) {
+        codeVal.textContent = gameSessionId.toUpperCase();
+    }
+
+    const modalCodeVal = document.getElementById('phone-modal-code');
+    if (modalCodeVal) {
+        modalCodeVal.textContent = gameSessionId.toUpperCase();
     }
 
     // Main QR Box
@@ -1638,13 +1746,22 @@ function pollStateFromServer() {
 }
 
 function handlePCEventSync(eventData) {
-    if (!eventData || !eventData.event) return;
+    if (!eventData) return;
+    const action = eventData.action || eventData.event;
 
-    if (eventData.event === 'PHONE_PING') {
+    if (action === 'PHONE_PING' || action === 'PHONE_CONNECTED') {
         updateConnectionUI(true);
-    } else if (eventData.event === 'CALL_1_ENDED' && !hackerCallEnded && !pcLockdownActive) {
+        if (cloudRelay) {
+            cloudRelay.send({
+                action: 'PC_ACK',
+                event: 'PC_ACK',
+                pcLockdownActive: pcLockdownActive,
+                timestamp: Date.now()
+            });
+        }
+    } else if (action === 'CALL_1_ENDED' && !hackerCallEnded && !pcLockdownActive) {
         onCall1Ended();
-    } else if (eventData.event === 'PC_UNLOCKED' && pcLockdownActive) {
+    } else if (action === 'PC_UNLOCKED' && pcLockdownActive) {
         unlockPCRestore();
     }
 }
@@ -1652,19 +1769,24 @@ function handlePCEventSync(eventData) {
 function emitSyncAction(actionName, extra = {}) {
     const payload = { action: actionName, event: actionName, timestamp: Date.now(), ...extra };
 
-    // 1. Post to Server Relay (if local server running)
+    // 1. Cloud Relay (MQTT over WebSocket for Vercel & Mobile Hotspot)
+    if (cloudRelay) {
+        cloudRelay.send(payload);
+    }
+
+    // 2. Post to Server Relay (if local server running)
     fetch('/api/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     }).catch(() => {});
 
-    // 2. Direct P2P Channel (for Vercel without a backend)
+    // 3. Direct P2P Channel (for WebRTC if available)
     if (activePeerConn && activePeerConn.open) {
         activePeerConn.send(payload);
     }
 
-    // 3. Local BroadcastChannel
+    // 4. Local BroadcastChannel
     if (syncBroadcast) {
         syncBroadcast.postMessage(payload);
     }

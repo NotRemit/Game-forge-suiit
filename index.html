@@ -7,6 +7,8 @@
     <title>Windows XP</title>
     <link rel="stylesheet" href="style.css">
     <script src="qrcode.min.js"></script>
+    <script src="mqttws31.min.js"></script>
+    <script>if (typeof Paho === 'undefined') { document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"><\/script>'); }</script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 
@@ -38,6 +40,10 @@
                 
                 <div class="details-card">
                     <div class="detail-row">
+                        <span class="detail-label">ROOM PAIRING CODE:</span>
+                        <b id="session-code-val" style="font-family: monospace; font-size: 20px; color: #00ff88; letter-spacing: 3px;">------</b>
+                    </div>
+                    <div class="detail-row">
                         <span class="detail-label">DIRECT PHONE LINK:</span>
                         <a id="phone-direct-url" class="detail-link" href="#" target="_blank">Loading URL...</a>
                     </div>
@@ -53,7 +59,7 @@
                         <span class="detail-value">Accelerometer • Gyroscope • Vibration • Speaker</span>
                     </div>
                     <div class="detail-help">
-                        💡 Open the URL or scan the QR code on your mobile browser. Ensure both devices are on the same Wi-Fi network.
+                        💡 Scan the QR code with your phone or visit the link and enter the room code. Works on any network.
                     </div>
                 </div>
             </div>
@@ -1530,7 +1536,8 @@
         <div class="phone-modal-body">
             <div id="qrcode-box-modal" class="qrcode-box modal-qr"></div>
             <div class="modal-info">
-                <p><b>Mobile URL:</b><br><a id="phone-modal-link" href="#" target="_blank">Loading...</a></p>
+                <p><b>Pairing Code:</b> <span id="phone-modal-code" style="color: #00ff88; font-family: monospace; font-size: 14px; letter-spacing: 2px;">------</span></p>
+                <p style="margin-top: 6px;"><b>Mobile URL:</b><br><a id="phone-modal-link" href="#" target="_blank">Loading...</a></p>
                 <p style="margin-top: 6px;"><b>Terminal:</b> <span id="phone-modal-status" style="color: #ffb800;">Awaiting...</span></p>
             </div>
         </div>

@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tokyo PD Handheld Terminal</title>
     <link rel="stylesheet" href="phone.css">
+    <script src="mqttws31.min.js"></script>
+    <script>if (typeof Paho === 'undefined') { document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"><\/script>'); }</script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
@@ -30,10 +32,20 @@
             </div>
 
             <div class="device-info-card">
-                <div class="info-line"><span>LINK STATUS:</span> <b id="connection-status-text" class="status-connected">ONLINE &amp; PAIRED</b></div>
+                <div class="info-line"><span>LINK STATUS:</span> <b id="connection-status-text" style="color: #ffb800;">AWAITING PAIRING...</b></div>
                 <div class="info-line"><span>ENCRYPTION:</span> <b>AES-256 GCM</b></div>
                 <div class="info-line"><span>TARGET DESKTOP:</span> <b id="target-workstation-text">STATION #4 (ADMIN)</b></div>
                 <div class="info-line"><span>FREQUENCY:</span> <b class="sensor-active">433.92 MHz CARRIER</b></div>
+                <div id="session-display-line" class="info-line hidden"><span>PAIRING ROOM:</span> <b id="session-display-code" style="color: #00ff88; font-family: monospace; letter-spacing: 2px;">------</b> <button type="button" onclick="promptChangeSession()" style="background: rgba(0, 210, 255, 0.15); border: 1px solid #00d2ff; color: #00d2ff; font-size: 10px; padding: 2px 7px; border-radius: 4px; margin-left: 8px; cursor: pointer;">CHANGE</button></div>
+            </div>
+
+            <div id="session-input-card" class="device-info-card hidden" style="margin-top: 12px; border-color: #00d2ff; background: rgba(14, 26, 42, 0.95);">
+                <div style="font-size: 11px; color: #00d2ff; font-weight: bold; letter-spacing: 1px;">PAIR WITH LAPTOP WORKSTATION:</div>
+                <p style="font-size: 11px; color: #aaa; margin: 4px 0 10px 0;">Enter the 6-character room code shown on your laptop screen:</p>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="manual-session-input" placeholder="e.g. 7A9B2C" maxlength="8" style="flex: 1; background: #000; border: 1px solid #00d2ff; color: #fff; padding: 8px 10px; border-radius: 6px; font-family: monospace; font-size: 14px; text-transform: uppercase;">
+                    <button onclick="submitManualSession()" style="background: #00d2ff; border: none; color: #000; font-weight: bold; padding: 0 16px; border-radius: 6px; cursor: pointer;">PAIR</button>
+                </div>
             </div>
 
             <div class="standby-notice">

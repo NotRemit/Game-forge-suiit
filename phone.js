@@ -503,12 +503,167 @@ function stopCallTimer() {
 }
 
 // -------------------------------------------------------------------
-// Synchronization & Server / P2P Relay
+// Synchronization & Multi-Layer Cloud Relay (MQTT over WebSocket)
 // -------------------------------------------------------------------
+class CloudRelay {
+    constructor(sessionId, role, onMessage, onStatusChange) {
+        this.sessionId = (sessionId || 'sigil_default').toLowerCase().trim();
+        this.role = role;
+        this.onMessage = onMessage;
+        this.onStatusChange = onStatusChange;
+        this.client = null;
+        this.connected = false;
+        this.brokers = [
+            { host: 'broker.hivemq.com', port: 8884, path: '/mqtt' },
+            { host: 'broker.emqx.io', port: 8084, path: '/mqtt' }
+        ];
+        this.brokerIdx = 0;
+        this.subTopic = this.role === 'pc' ? `sigil/${this.sessionId}/to_pc` : `sigil/${this.sessionId}/to_phone`;
+        this.pubTopic = this.role === 'pc' ? `sigil/${this.sessionId}/to_phone` : `sigil/${this.sessionId}/to_pc`;
+        this.connect();
+    }
+
+    connect() {
+        if (typeof Paho === 'undefined' || !Paho.MQTT) {
+            setTimeout(() => this.connect(), 1500);
+            return;
+        }
+        const b = this.brokers[this.brokerIdx];
+        const clientId = `sigil_${this.role}_${Math.random().toString(36).substring(2, 9)}`;
+        try {
+            this.client = new Paho.MQTT.Client(b.host, b.port, b.path, clientId);
+            this.client.onConnectionLost = (resp) => {
+                this.connected = false;
+                if (this.onStatusChange) this.onStatusChange(false);
+                if (resp && resp.errorCode !== 0) {
+                    console.log(`[CloudRelay] ${this.role} lost connection:`, resp.errorMessage);
+                    this.brokerIdx = (this.brokerIdx + 1) % this.brokers.length;
+                    setTimeout(() => this.connect(), 2000);
+                }
+            };
+            this.client.onMessageArrived = (message) => {
+                try {
+                    const data = JSON.parse(message.payloadString);
+                    if (this.onMessage) this.onMessage(data);
+                } catch (e) {
+                    console.warn(`[CloudRelay] ${this.role} parse error:`, e);
+                }
+            };
+            this.client.connect({
+                useSSL: true,
+                timeout: 5,
+                keepAliveInterval: 30,
+                cleanSession: true,
+                onSuccess: () => {
+                    this.connected = true;
+                    this.client.subscribe(this.subTopic, {
+                        onSuccess: () => {
+                            console.log(`[CloudRelay] ${this.role} subscribed to ${this.subTopic}`);
+                            if (this.onStatusChange) this.onStatusChange(true);
+                        }
+                    });
+                },
+                onFailure: (err) => {
+                    this.connected = false;
+                    if (this.onStatusChange) this.onStatusChange(false);
+                    console.warn(`[CloudRelay] ${this.role} connect failed to ${b.host}:`, err);
+                    this.brokerIdx = (this.brokerIdx + 1) % this.brokers.length;
+                    setTimeout(() => this.connect(), 2500);
+                }
+            });
+        } catch (e) {
+            setTimeout(() => this.connect(), 3000);
+        }
+    }
+
+    send(data) {
+        if (!this.client || !this.connected) return false;
+        try {
+            const payload = typeof data === 'string' ? data : JSON.stringify(data);
+            const msg = new Paho.MQTT.Message(payload);
+            msg.destinationName = this.pubTopic;
+            this.client.send(msg);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+}
+
+// Session resolution: URL query ?session=... > LocalStorage
+const urlParams = new URLSearchParams(window.location.search);
+let phoneSession = urlParams.get('session');
+if (phoneSession) {
+    phoneSession = phoneSession.toLowerCase().trim();
+    localStorage.setItem('scribe_phone_session', phoneSession);
+} else {
+    phoneSession = localStorage.getItem('scribe_phone_session');
+    if (phoneSession) phoneSession = phoneSession.toLowerCase().trim();
+}
+
+let cloudRelay = null;
 let phonePeer = null;
 let phonePeerConn = null;
 
+function initSessionUI() {
+    const statusEl = document.getElementById('connection-status-text');
+    const inputCard = document.getElementById('session-input-card');
+    const displayLine = document.getElementById('session-display-line');
+    const displayCode = document.getElementById('session-display-code');
+
+    if (phoneSession) {
+        if (inputCard) inputCard.classList.add('hidden');
+        if (displayLine) displayLine.classList.remove('hidden');
+        if (displayCode) displayCode.textContent = phoneSession.toUpperCase();
+        if (statusEl) {
+            statusEl.textContent = 'CONNECTING TO WORKSTATION...';
+            statusEl.style.color = '#00d2ff';
+        }
+    } else {
+        if (inputCard) inputCard.classList.remove('hidden');
+        if (displayLine) displayLine.classList.add('hidden');
+        if (statusEl) {
+            statusEl.textContent = 'ENTER PAIRING CODE';
+            statusEl.style.color = '#ffb800';
+        }
+        const input = document.getElementById('manual-session-input');
+        if (input) setTimeout(() => input.focus(), 300);
+    }
+}
+
+window.submitManualSession = function () {
+    const input = document.getElementById('manual-session-input');
+    if (!input) return;
+    const rawVal = input.value.trim().toLowerCase();
+    if (!rawVal) return;
+    localStorage.setItem('scribe_phone_session', rawVal);
+    const url = new URL(window.location.href);
+    url.searchParams.set('session', rawVal);
+    window.location.href = url.toString();
+};
+
+window.promptChangeSession = function () {
+    const inputCard = document.getElementById('session-input-card');
+    if (inputCard) {
+        inputCard.classList.toggle('hidden');
+        const input = document.getElementById('manual-session-input');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }
+};
+
 function initSync() {
+    initSessionUI();
+
+    const manualInput = document.getElementById('manual-session-input');
+    if (manualInput) {
+        manualInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') window.submitManualSession();
+        });
+    }
+
     if (broadcastChannel) {
         broadcastChannel.onmessage = (event) => {
             handleSyncEvent(event.data);
@@ -523,27 +678,37 @@ function initSync() {
         }
     });
 
+    if (phoneSession) {
+        cloudRelay = new CloudRelay(phoneSession, 'phone', (data) => {
+            handleSyncEvent(data);
+        }, (connected) => {
+            console.log('[Phone CloudRelay] status:', connected);
+            if (connected) {
+                emitAction('PHONE_PING');
+            }
+        });
+    }
+
     initPhonePeerP2P();
 }
 
 function initPhonePeerP2P() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const session = urlParams.get('session');
-    if (!session || typeof Peer === 'undefined') return;
+    if (!phoneSession || typeof Peer === 'undefined') return;
 
     try {
         phonePeer = new Peer();
         phonePeer.on('open', () => {
-            const targetPeerId = 'sigil-' + session;
+            const targetPeerId = 'sigil-' + phoneSession;
             phonePeerConn = phonePeer.connect(targetPeerId);
 
             phonePeerConn.on('open', () => {
                 const statusEl = document.getElementById('connection-status-text');
                 if (statusEl) {
                     statusEl.className = 'status-connected';
-                    statusEl.textContent = 'ONLINE & PAIRED (P2P)';
+                    statusEl.style.color = '#00ff88';
+                    statusEl.textContent = 'ONLINE & PAIRED ✓';
                 }
-                phonePeerConn.send({ action: 'PHONE_PING' });
+                phonePeerConn.send({ action: 'PHONE_PING', event: 'PHONE_PING' });
             });
 
             phonePeerConn.on('data', (data) => {
@@ -558,14 +723,8 @@ function initPhonePeerP2P() {
 }
 
 function sendHeartbeat() {
-    fetch('/api/action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Bypass-Tunnel-Reminder': 'true' },
-        body: JSON.stringify({ action: 'PHONE_PING' })
-    }).catch(() => {});
-
-    if (phonePeerConn && phonePeerConn.open) {
-        phonePeerConn.send({ action: 'PHONE_PING' });
+    if (phoneSession) {
+        emitAction('PHONE_PING');
     }
 }
 
@@ -619,9 +778,32 @@ function handleSyncEvent(eventData) {
     if (!eventData) return;
     const evt = eventData.event || eventData.action;
 
-    if (evt === 'TRIGGER_CALL_1' && STATE.activeScreen === 'screen-standby') {
+    if (evt === 'PC_ACK') {
+        const statusEl = document.getElementById('connection-status-text');
+        if (statusEl) {
+            statusEl.className = 'status-connected';
+            statusEl.style.color = '#00ff88';
+            statusEl.textContent = 'ONLINE & PAIRED ✓';
+        }
+        const targetStation = document.getElementById('target-workstation-text');
+        if (targetStation) {
+            targetStation.textContent = 'STATION #4 [PAIRED]';
+            targetStation.style.color = '#00ff88';
+        }
+
+        if (eventData.pcLockdownActive && STATE.activeScreen === 'screen-standby') {
+            stopRingtone();
+            stopCallTimer();
+            STATE.shakeProgress = 0;
+            updateShakeUI();
+            startStaticAudio(0.3);
+            switchScreen('screen-shake-reconnect');
+        }
+    } else if (evt === 'TRIGGER_CALL_1' && STATE.activeScreen === 'screen-standby') {
         triggerIncomingCall(1);
     } else if (evt === 'PC_LOCKED' || evt === 'LOCK_PC') {
+        stopRingtone();
+        stopCallTimer();
         STATE.shakeProgress = 0;
         updateShakeUI();
         startStaticAudio(0.3);
@@ -638,24 +820,29 @@ function handleSyncEvent(eventData) {
 function emitAction(actionName, extra = {}) {
     const payload = { action: actionName, event: actionName, timestamp: Date.now(), ...extra };
 
-    // 1. Post to Server Relay (if server is present)
+    // 1. Cloud Relay (MQTT over WebSocket - works on Vercel & Mobile)
+    if (cloudRelay) {
+        cloudRelay.send(payload);
+    }
+
+    // 2. Post to Server Relay (if local server is present)
     fetch('/api/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Bypass-Tunnel-Reminder': 'true' },
         body: JSON.stringify(payload)
     }).catch(() => {});
 
-    // 2. Direct P2P Channel (for Vercel without a server)
+    // 3. Direct P2P Channel (for WebRTC if connected)
     if (phonePeerConn && phonePeerConn.open) {
         phonePeerConn.send(payload);
     }
 
-    // 3. Local BroadcastChannel (for same browser tabs)
+    // 4. Local BroadcastChannel (for same browser tabs)
     if (broadcastChannel) {
         broadcastChannel.postMessage(payload);
     }
 
-    // 4. LocalStorage fallback
-    localStorage.setItem('scribe_sigil_event', JSON.stringify({ event: actionName, t: Date.now(), ...extra }));
+    // 5. LocalStorage fallback
+    localStorage.setItem('scribe_sigil_event', JSON.stringify(payload));
 }
 
