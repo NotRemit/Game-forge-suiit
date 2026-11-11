@@ -4,31 +4,70 @@ Welcome to the official walkthrough for **Scribe Sigil**. This guide provides a 
 
 ---
 
+## 📱 Pre-Investigation: Pairing Detective Handheld Terminal
+
+Before accessing the workstation, connect your smartphone:
+
+1. Click **START INVESTIGATION** on the main title screen.
+2. Scan the on-screen **QR Code** with your phone's camera (or navigate to `http://<your-ip>:8000/phone.html`).
+3. Your mobile device pairs with the workstation as an encrypted Tokyo Metropolitan Police Field Terminal.
+4. Click **PROCEED TO WORKSTATION**.
+
+---
+
 ## 🛠️ Phase 1: Accessing the System
 
 The game begins with a Windows XP-style lock screen.
 
-1.  **Select User:** Administrator
-2.  **Password:** `technova`
-3.  **Objective:** Gain access to the desktop environment.
+1. **Select User:** Administrator
+2. **Password Decryption:** Click *"Forgot password?"* to view the Caesar cipher: `kdfnwrehu`. Walking each letter 3 steps backward reveals:
+3. **Password:** `hacktober`
+4. **Objective:** Gain access to the desktop environment.
 
 > [!NOTE]
 > Once logged in, you will find several applications: File Explorer, Tokyo Police, Internet Explorer, Calculator, Notepad, and Email.
 
 ---
 
-## 🚔 Phase 2: The Tokyo Police Database
+## 🚔 Phase 2: The Wiretap, PC Lockdown & Sensor Recovery
 
-To begin the investigation, you need access to official law enforcement files.
+As soon as you attempt to investigate official police files by opening any application window (such as **Tokyo Police** or **File Explorer**):
 
-1.  **Gather Credentials:** Open **File Explorer**. Locate the file `police_admin.mp4`.
-2.  **Login to Police App:** 
-    *   **Officer ID:** `police_admin` (from the video filename).
-    *   **Password:** `28481211`.
-3.  **Analyze Evidence:**
-    *   Open **Audio Evidence**.
-    *   Listen to the files `GAY.mp3` and `STRAIGHT.mp3`.
-    *   Activate **"Reverse Mode"** to hear hidden messages or codes.
+1. **The First Call (Loudspeaker Warning):**
+   * Your connected phone terminal will ring with an incoming call from `UNKNOWN CALLER`.
+   * Answer the call: the suspect's threatening voice broadcasts on **loudspeaker**, ordering you to cease the investigation and shut down the computer immediately.
+   * Hang up the call.
+2. **The 5-Second Shutdown & PC Lockdown:**
+   * Exactly 5 seconds after hanging up, your PC monitor flickers into a critical **Remote Takeover / Lockdown Screen** (`CRITICAL SECURITY BREACH: TERMINAL ACCESS SUSPENDED`).
+   * The computer demands an emergency recovery key.
+3. **Carrier Signal Lost (Shake Sensor):**
+   * Simultaneously, your phone screen corrupts with digital static (`CARRIER OVERLOAD`).
+   * **Shake your physical phone vigorously** back and forth (using your device's accelerometer) until the frequency buffer reaches 100%.
+4. **The Second Call (Hold to Ear with Riddle):**
+   * Once re-synced, an encrypted transmission rings your phone (`ENCRYPTED WHISPER`).
+   * Answer the call. The voice presents a riddle:
+     > *"Can't hear me over the static? Secrets are not shouted into the room... Bring this phone close to your ear."*
+   * **Hold the phone vertically against your ear** (using your phone's gyroscope / tilt sensor).
+   * As soon as the device detects ear proximity, the static disappears and the caller clearly whispers the emergency override code:
+     > **`SHADOW7743`**
+5. **Restoring the PC Workstation:**
+   * Type `SHADOW7743` into the locked PC monitor and click **RECOVER SYSTEM**.
+   * The intrusion backdoor is purged, and full access to your Windows XP workstation is restored.
+
+---
+
+## 📂 Phase 2B: The Tokyo Police Database Login
+
+Now that the system is restored, proceed with official law enforcement files:
+
+1. **Gather Credentials:** Open **File Explorer**. Locate the file `police_admin.mp4`.
+2. **Login to Police App:** 
+    * **Officer ID:** `police_admin` (from the video filename).
+    * **Password:** `28481211`.
+3. **Analyze Evidence:**
+    * Open **Audio Evidence**.
+    * Listen to the files `GAY.mp3` and `STRAIGHT.mp3`.
+    * Activate **"Reverse Mode"** to hear hidden messages or codes.
 
 ---
 

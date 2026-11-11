@@ -21,6 +21,7 @@ function init() {
     updateClock();
     setInterval(updateClock, 60000);
     updateNotepadLockIndicator();
+    initMobileSync();
 
     if (gameCompleted) {
         showCompletionScreen();
@@ -31,10 +32,14 @@ function init() {
 window.initTimer = function () {
     if (startTime && !gameCompleted) {
         document.getElementById('start-overlay').classList.add('hidden');
+        const connScreen = document.getElementById('connect-screen');
+        if (connScreen) connScreen.classList.add('hidden');
         document.getElementById('game-timer').classList.remove('hidden');
         startTimerInterval();
     } else if (gameCompleted) {
         document.getElementById('start-overlay').classList.add('hidden');
+        const connScreen = document.getElementById('connect-screen');
+        if (connScreen) connScreen.classList.add('hidden');
         document.getElementById('game-timer').classList.add('hidden');
         showCompletionScreen();
     }
@@ -43,14 +48,28 @@ window.initTimer = function () {
 window.startInvestigation = function () {
     if (gameCompleted) return; // Don't let player play again
     
-    startTime = window.Date.now();
-    localStorage.setItem('gameStartTime', startTime);
     document.getElementById('start-overlay').style.opacity = '0';
     setTimeout(() => {
         document.getElementById('start-overlay').classList.add('hidden');
+        showConnectionScreen();
+    }, 400);
+}
+
+window.proceedToWorkstation = function (skipPhone = false) {
+    startTime = window.Date.now();
+    localStorage.setItem('gameStartTime', startTime);
+    const connScreen = document.getElementById('connect-screen');
+    if (connScreen) {
+        connScreen.style.opacity = '0';
+        setTimeout(() => {
+            connScreen.classList.add('hidden');
+            document.getElementById('game-timer').classList.remove('hidden');
+            startTimerInterval();
+        }, 300);
+    } else {
         document.getElementById('game-timer').classList.remove('hidden');
-    }, 500);
-    startTimerInterval();
+        startTimerInterval();
+    }
 }
 
 function startTimerInterval() {
@@ -164,7 +183,7 @@ window.showHint = function (message, title = 'DECRYPTION HINT') {
 }
 
 window.showLockScreenHint = function() {
-    showHint('CIPHER: whfkqryd\n\n"I was used by an ancient roman hand,\nTo hide plain words across the land.\nEach letter walks 3 steps behind,\nBackward it moves not hard to find."', 'PASSWORD RECOVERY');
+    showHint('CIPHER: kdfnwrehu\n\n"I was used by an ancient roman hand,\nTo hide plain words across the land.\nEach letter walks 3 steps behind,\nBackward it moves not hard to find."', 'PASSWORD RECOVERY');
 }
 
 // Update Notepad Lock Indicator
@@ -181,8 +200,8 @@ function updateNotepadLockIndicator() {
 
 // Lock Screen Logic
 function attemptLogin() {
-    const password = passwordInput.value;
-    if (password === 'technova') {
+    const password = passwordInput.value.trim().toLowerCase();
+    if (password === 'hacktober') {
         unlockDesktop();
     } else {
         showLoginError();
@@ -230,7 +249,6 @@ window.openWindow = function (appName) {
         return;
     }
 
-
     const win = document.getElementById(`window-${appName}`);
     if (win) {
         win.classList.remove('hidden');
@@ -238,6 +256,9 @@ window.openWindow = function (appName) {
     } else {
         console.error(`Window not found for app: ${appName}`);
     }
+
+    // Trigger Phase 2 Phone Call once user opens a window
+    checkTriggerPhase2Call(appName);
 }
 
 window.closeWindow = function (appName) {
@@ -1383,5 +1404,318 @@ if (emailPasswordInput) {
         if (e.key === 'Enter') window.emailLogin();
     });
 }
+
+// ==========================================================================
+// MOBILE TERMINAL SYNC, CALL 1 (LOUDSPEAKER), SHAKE SENSOR & CALL 2 (EAR RIDDLE)
+// ==========================================================================
+
+let phoneLinkUrl = '';
+let qrCodeObj = null;
+let qrCodeModalObj = null;
+let syncBroadcast = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('scribe_sigil_sync') : null;
+let isPhoneConnected = false;
+let hackerCallTriggered = false;
+let hackerCallEnded = false;
+let pcLockdownActive = false;
+let countdownTimer = null;
+
+function initMobileSync() {
+    // Setup Enter key for lockdown recovery input
+    const overrideInput = document.getElementById('override-code-input');
+    if (overrideInput) {
+        overrideInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') window.submitOverrideCode();
+        });
+    }
+
+    // Setup Sync listeners
+    if (syncBroadcast) {
+        syncBroadcast.onmessage = (event) => {
+            handlePCEventSync(event.data);
+        };
+    }
+
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'scribe_sigil_event' && e.newValue) {
+            try {
+                handlePCEventSync(JSON.parse(e.newValue));
+            } catch (err) {}
+        }
+    });
+
+    // Start background polling to relay server
+    setInterval(pollStateFromServer, 700);
+
+    // Initial IP and pairing check
+    fetch('/api/ip')
+        .then(res => res.json())
+        .then(data => {
+            setupQRDisplay(data.phone_url, data.phone_connected);
+        })
+        .catch(() => {
+            const host = window.location.hostname || 'localhost';
+            const port = window.location.port || '8000';
+            setupQRDisplay(`http://${host}:${port}/phone.html`, false);
+        });
+}
+
+function showConnectionScreen() {
+    const connScreen = document.getElementById('connect-screen');
+    if (connScreen) connScreen.classList.remove('hidden');
+
+    fetch('/api/ip')
+        .then(res => res.json())
+        .then(data => {
+            setupQRDisplay(data.phone_url, data.phone_connected);
+        })
+        .catch(() => {
+            const host = window.location.hostname || 'localhost';
+            const port = window.location.port || '8000';
+            setupQRDisplay(`http://${host}:${port}/phone.html`, false);
+        });
+}
+
+function setupQRDisplay(url, isConnected) {
+    phoneLinkUrl = url;
+
+    const directLink = document.getElementById('phone-direct-url');
+    if (directLink) {
+        directLink.textContent = url;
+        directLink.href = url;
+    }
+
+    const modalLink = document.getElementById('phone-modal-link');
+    if (modalLink) {
+        modalLink.textContent = url;
+        modalLink.href = url;
+    }
+
+    // Main QR Box
+    const qrBox = document.getElementById('qrcode-box');
+    if (qrBox && typeof QRCode !== 'undefined') {
+        qrBox.innerHTML = '';
+        try {
+            qrCodeObj = new QRCode(qrBox, {
+                text: url,
+                width: 146,
+                height: 146,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        } catch (e) {
+            console.warn('QR code render error:', e);
+        }
+    }
+
+    // Modal QR Box
+    const qrModalBox = document.getElementById('qrcode-box-modal');
+    if (qrModalBox && typeof QRCode !== 'undefined') {
+        qrModalBox.innerHTML = '';
+        try {
+            qrCodeModalObj = new QRCode(qrModalBox, {
+                text: url,
+                width: 116,
+                height: 116,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        } catch (e) {}
+    }
+
+    updateConnectionUI(isConnected);
+}
+
+function updateConnectionUI(connected) {
+    isPhoneConnected = connected;
+
+    const statusPill = document.getElementById('phone-status-indicator');
+    const statusText = document.getElementById('phone-status-text');
+    const modalStatus = document.getElementById('phone-modal-status');
+    const trayIcon = document.getElementById('tray-phone-icon');
+
+    if (connected) {
+        if (statusPill) {
+            statusPill.className = 'status-pill connected';
+        }
+        if (statusText) statusText.textContent = 'DETECTIVE TERMINAL PAIRED ✓';
+        if (modalStatus) {
+            modalStatus.textContent = 'Connected ✓';
+            modalStatus.style.color = '#00ff88';
+        }
+        if (trayIcon) trayIcon.classList.add('active');
+    } else {
+        if (statusPill) {
+            statusPill.className = 'status-pill waiting';
+        }
+        if (statusText) statusText.textContent = 'Awaiting Connection...';
+        if (modalStatus) {
+            modalStatus.textContent = 'Awaiting Connection...';
+            modalStatus.style.color = '#ffb800';
+        }
+        if (trayIcon) trayIcon.classList.remove('active');
+    }
+}
+
+function pollStateFromServer() {
+    fetch('/api/state')
+        .then(res => res.json())
+        .then(state => {
+            if (!state) return;
+            updateConnectionUI(state.phone_connected);
+
+            // Check if Call 1 ended from mobile -> begin 5-second shutdown countdown
+            if (state.call_1_ended && !hackerCallEnded && !pcLockdownActive) {
+                onCall1Ended();
+            }
+
+            // Check if PC unlocked remotely
+            if (state.pc_recovered && pcLockdownActive) {
+                unlockPCRestore();
+            }
+        })
+        .catch(() => {});
+}
+
+function handlePCEventSync(eventData) {
+    if (!eventData || !eventData.event) return;
+
+    if (eventData.event === 'PHONE_PING') {
+        updateConnectionUI(true);
+    } else if (eventData.event === 'CALL_1_ENDED' && !hackerCallEnded && !pcLockdownActive) {
+        onCall1Ended();
+    } else if (eventData.event === 'PC_UNLOCKED' && pcLockdownActive) {
+        unlockPCRestore();
+    }
+}
+
+function emitSyncAction(actionName, extra = {}) {
+    const payload = { action: actionName, timestamp: Date.now(), ...extra };
+
+    fetch('/api/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).catch(() => {});
+
+    if (syncBroadcast) {
+        syncBroadcast.postMessage({ event: actionName, ...extra });
+    }
+    localStorage.setItem('scribe_sigil_event', JSON.stringify({ event: actionName, t: Date.now(), ...extra }));
+}
+
+// Trigger Call 1 when user opens any window (Tokyo Police, File Explorer, etc.)
+function checkTriggerPhase2Call(appName) {
+    if (hackerCallTriggered || pcLockdownActive) return;
+
+    hackerCallTriggered = true;
+    emitSyncAction('TRIGGER_CALL_1', { app: appName });
+
+    showHint(
+        '⚠️ INCOMING WIRELESS INTERCEPT: An urgent restricted call has been routed to your connected mobile terminal! Answer it now.',
+        'ENCRYPTED WIRELESS CALL'
+    );
+}
+
+// When Call 1 ends on phone: 5-second countdown to PC screen shutdown
+function onCall1Ended() {
+    if (hackerCallEnded || pcLockdownActive) return;
+    hackerCallEnded = true;
+
+    showHint(
+        '⚠️ CRITICAL THREAT: Remote caller terminated link. Malicious exploit payload deploying! System lockdown in 5 seconds...',
+        'REMOTE INTRUSION WARNING'
+    );
+
+    let secondsLeft = 5;
+    countdownTimer = setInterval(() => {
+        secondsLeft--;
+        if (secondsLeft <= 0) {
+            clearInterval(countdownTimer);
+            triggerPCLockdown();
+        }
+    }, 1000);
+}
+
+// Fullscreen PC Lockdown / Remote Takeover
+function triggerPCLockdown() {
+    pcLockdownActive = true;
+    emitSyncAction('LOCK_PC');
+
+    const lockdownScreen = document.getElementById('pc-lockdown-screen');
+    if (lockdownScreen) {
+        lockdownScreen.classList.remove('hidden');
+    }
+
+    const input = document.getElementById('override-code-input');
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+
+    // Play Glitch Sound FX via Web Audio
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.6);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.6);
+    } catch (e) {}
+}
+
+// Verify Emergency Override Code (SHADOW7743)
+window.submitOverrideCode = function () {
+    const input = document.getElementById('override-code-input');
+    const code = input ? input.value.trim().toLowerCase() : '';
+    const errorEl = document.getElementById('override-error-msg');
+
+    if (code === 'shadow7743') {
+        if (errorEl) errorEl.classList.add('hidden');
+        unlockPCRestore();
+    } else {
+        if (errorEl) {
+            errorEl.classList.remove('hidden');
+            setTimeout(() => errorEl.classList.add('hidden'), 3500);
+        }
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
+    }
+};
+
+function unlockPCRestore() {
+    pcLockdownActive = false;
+    emitSyncAction('UNLOCK_PC');
+
+    const lockdownScreen = document.getElementById('pc-lockdown-screen');
+    if (lockdownScreen) {
+        lockdownScreen.classList.add('hidden');
+    }
+
+    showHint(
+        'EMERGENCY OVERRIDE ACCEPTED: Workstation integrity re-established. Remote backdoor purged. You may now continue the investigation in Tokyo Police.',
+        'ACCESS RESTORED'
+    );
+}
+
+// System Tray Phone Modal Controls
+window.openPhoneModal = function () {
+    const modal = document.getElementById('phone-modal');
+    if (modal) modal.classList.remove('hidden');
+};
+
+window.closePhoneModal = function () {
+    const modal = document.getElementById('phone-modal');
+    if (modal) modal.classList.add('hidden');
+};
 
 init();

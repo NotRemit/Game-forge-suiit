@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Windows XP</title>
     <link rel="stylesheet" href="style.css">
+    <script src="qrcode.min.js"></script>
 </head>
 
 <body onload="initTimer()">
@@ -14,7 +15,89 @@
         <div class="overlay-content">
             <h1 class="logo-text">Scribe Sigil</h1>
             <p class="tagline">The Shibuya Crossing Incident</p>
-            <button id="start-game-btn" class="start-game-btn" onclick="startInvestigation()">START INVESTIGATION</button>
+            <button id="start-game-btn" class="start-game-btn" onclick="startInvestigation()">START
+                INVESTIGATION</button>
+        </div>
+    </div>
+
+    <!-- Device Connection Screen (Before Workstation Access) -->
+    <div id="connect-screen" class="connect-screen hidden">
+        <div class="connect-panel">
+            <div class="connect-header">
+                <span class="connect-badge">FIELD PROTOCOL 2.4</span>
+                <h1 class="connect-title">CONNECT DETECTIVE TERMINAL</h1>
+                <p class="connect-subtitle">Pair your smartphone to receive incoming wiretaps, emergency calls, and use physical phone sensors.</p>
+            </div>
+            
+            <div class="connect-grid">
+                <div class="qr-card">
+                    <div id="qrcode-box" class="qrcode-box"></div>
+                    <div class="qr-scan-label">📷 Scan with Phone Camera</div>
+                </div>
+                
+                <div class="details-card">
+                    <div class="detail-row">
+                        <span class="detail-label">DIRECT PHONE LINK:</span>
+                        <a id="phone-direct-url" class="detail-link" href="#" target="_blank">Loading URL...</a>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">TERMINAL STATUS:</span>
+                        <div id="phone-status-indicator" class="status-pill waiting">
+                            <span class="status-dot"></span>
+                            <span id="phone-status-text">Awaiting Connection...</span>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">HARDWARE SENSORS:</span>
+                        <span class="detail-value">Accelerometer • Gyroscope • Vibration • Speaker</span>
+                    </div>
+                    <div class="detail-help">
+                        💡 Open the URL or scan the QR code on your mobile browser. Ensure both devices are on the same Wi-Fi network.
+                    </div>
+                </div>
+            </div>
+
+            <div class="connect-actions">
+                <button id="proceed-to-workstation-btn" class="proceed-btn" onclick="proceedToWorkstation()">
+                    PROCEED TO WORKSTATION →
+                </button>
+                <button class="skip-btn" onclick="proceedToWorkstation(true)">
+                    Skip / Solo Mode (Without Phone)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PC Lockdown Overlay (Hacker Takeover Screen) -->
+    <div id="pc-lockdown-screen" class="pc-lockdown-screen hidden">
+        <div class="crt-scanlines"></div>
+        <div class="lockdown-content">
+            <div class="breach-header">
+                <div class="breach-skull">⚠️</div>
+                <h1 class="breach-title">CRITICAL SECURITY BREACH</h1>
+                <div class="breach-sub">TERMINAL ACCESS SUSPENDED BY REMOTE HOST</div>
+            </div>
+
+            <div class="breach-body">
+                <div class="intrusion-log">
+                    <div>[ALERT] UNAUTHORIZED HOST INJECTION DETECTED AT PORT 8000</div>
+                    <div>[ALERT] OPERATING SYSTEM ENCRYPTION SUBSYSTEMS COMPROMISED</div>
+                    <div>[ALERT] POLICE WORKSTATION ACCESS SUSPENDED DUE TO TAMPERING</div>
+                    <div class="highlight-red">[THREAT] "DID YOU REALLY THINK YOU COULD PRY INTO MY MATTERS?"</div>
+                </div>
+
+                <div class="override-box">
+                    <label for="override-code-input" class="override-label">ENTER EMERGENCY RECOVERY KEY TO RESTORE WORKSTATION:</label>
+                    <div class="override-input-group">
+                        <input type="text" id="override-code-input" placeholder="Enter override password..." autocomplete="off" spellcheck="false">
+                        <button id="override-submit-btn" onclick="submitOverrideCode()">RECOVER SYSTEM</button>
+                    </div>
+                    <div id="override-error-msg" class="override-error hidden">❌ INVALID OVERRIDE KEY. ACCESS DENIED.</div>
+                    <div id="override-hint-banner" class="override-hint-banner">
+                        📞 Check your connected phone terminal! Answer the encrypted call and listen to the voice riddle to acquire the recovery key.
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -70,10 +153,6 @@
     </div>
 
     <!-- Desktop -->
-
-
-
-
 
 
 
@@ -1137,19 +1216,24 @@
                                 but different car brand.</p>
                         </div>
                     </div>
-                    <div id="accusation-section" style="margin-top: 30px; padding: 20px; border: 2px solid #0f0; background: rgba(0, 30, 0, 0.9);">
+                    <div id="accusation-section"
+                        style="margin-top: 30px; padding: 20px; border: 2px solid #0f0; background: rgba(0, 30, 0, 0.9);">
                         <h3 style="color: #0f0; margin-top: 0; text-align: center;">FINAL ACCUSATION</h3>
                         <p style="font-size: 11px; color: #8f8; text-align: center; margin-bottom: 15px;">
                             Enter the full name of the perpetrator to close the case.
                         </p>
                         <div class="form-group" style="display: flex; gap: 10px;">
-                            <input type="text" id="culprit-name-input" placeholder="Enter Perpetrator Name" style="flex: 1;">
-                            <button class="police-btn" onclick="submitAccusation()" style="margin: 0; padding: 5px 15px;">SUBMIT</button>
+                            <input type="text" id="culprit-name-input" placeholder="Enter Perpetrator Name"
+                                style="flex: 1;">
+                            <button class="police-btn" onclick="submitAccusation()"
+                                style="margin: 0; padding: 5px 15px;">SUBMIT</button>
                         </div>
-                        <div id="accusation-error" class="hidden" style="color: #ff3333; font-size: 12px; margin-top: 10px; text-align: center;"></div>
+                        <div id="accusation-error" class="hidden"
+                            style="color: #ff3333; font-size: 12px; margin-top: 10px; text-align: center;"></div>
                     </div>
 
-                    <button class="police-btn" onclick="closeSuspectsDatabase()" style="background: #666; margin-top: 20px;">
+                    <button class="police-btn" onclick="closeSuspectsDatabase()"
+                        style="background: #666; margin-top: 20px;">
                         ◀ BACK TO DATABASE
                     </button>
                 </div>
@@ -1430,7 +1514,23 @@
                 <!-- App tabs go here -->
             </div>
             <div class="system-tray">
+                <span id="tray-phone-icon" class="tray-phone-icon" onclick="openPhoneModal()" title="Detective Phone Link Status">📱</span>
                 <span id="clock">12:00 PM</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phone Modal (Accessed via system tray) -->
+    <div id="phone-modal" class="phone-modal hidden">
+        <div class="phone-modal-header">
+            <span>📱 Detective Mobile Link</span>
+            <button class="modal-close-btn" onclick="closePhoneModal()">✕</button>
+        </div>
+        <div class="phone-modal-body">
+            <div id="qrcode-box-modal" class="qrcode-box modal-qr"></div>
+            <div class="modal-info">
+                <p><b>Mobile URL:</b><br><a id="phone-modal-link" href="#" target="_blank">Loading...</a></p>
+                <p style="margin-top: 6px;"><b>Terminal:</b> <span id="phone-modal-status" style="color: #ffb800;">Awaiting...</span></p>
             </div>
         </div>
     </div>
