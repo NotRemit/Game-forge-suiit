@@ -1,0 +1,1196 @@
+/* Global Reset */
+* {
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Tahoma', 'Verdana', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    background-color: #000;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.blur {
+    filter: blur(15px);
+    transition: filter 0.5s ease;
+}
+
+/* --- START OVERLAY --- */
+.start-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(20px);
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.5s ease;
+}
+
+.overlay-content {
+    text-align: center;
+    color: white;
+}
+
+.logo-text {
+    font-size: 80px;
+    margin: 0;
+    font-family: 'Times New Roman', serif;
+    letter-spacing: 15px;
+    text-transform: uppercase;
+    background: linear-gradient(to bottom, #fff, #888);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+}
+
+.tagline {
+    font-size: 18px;
+    letter-spacing: 5px;
+    margin-bottom: 50px;
+    opacity: 0.7;
+    text-transform: uppercase;
+}
+
+.start-game-btn {
+    background: transparent;
+    border: 2px solid white;
+    color: white;
+    padding: 15px 40px;
+    font-size: 20px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 50px;
+}
+
+.start-game-btn:hover {
+    background: white;
+    color: black;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+/* --- COMPLETION OVERLAY --- */
+.completion-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(25px);
+    z-index: 20000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeInOverlay 1.5s ease forwards;
+}
+
+@keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.completion-content {
+    text-align: center;
+    color: white;
+    max-width: 600px;
+    padding: 60px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 30px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: slideUpContent 1s cubic-bezier(0.23, 1, 0.32, 1) decimal;
+}
+
+@keyframes slideUpContent {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.completion-title {
+    font-size: 64px;
+    margin: 0 0 20px 0;
+    font-family: 'Times New Roman', serif;
+    letter-spacing: 20px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #ffd700, #ffcc33, #ffffff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.4));
+}
+
+.completion-message {
+    font-size: 18px;
+    color: #ccc;
+    line-height: 1.6;
+    margin-bottom: 40px;
+}
+
+.completion-stats {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 40px;
+    border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.completion-stats p {
+    margin: 10px 0;
+    font-size: 14px;
+    letter-spacing: 3px;
+    color: #888;
+    text-transform: uppercase;
+}
+
+.highlight {
+    color: #ffd700;
+    font-weight: bold;
+    font-size: 24px;
+    display: block;
+    margin-top: 5px;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.made-with-love {
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+    margin-top: 20px;
+}
+
+/* --- GAME TIMER --- */
+.game-timer {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #0f0;
+    color: #0f0;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-family: 'Courier New', Courier, monospace;
+    z-index: 5000;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+}
+
+.timer-label {
+    font-size: 10px;
+    display: block;
+    margin-bottom: 3px;
+    opacity: 0.7;
+}
+
+.timer-val {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+/* Screen Containers */
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* --- LOCK SCREEN --- */
+#lock-screen {
+    background-color: #003399;
+    /* XP Blue */
+    background: linear-gradient(to right, #003399 0%, #3d79ce 50%, #003399 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 1000;
+}
+
+.lock-header {
+    height: 20%;
+    background: linear-gradient(to bottom, #003399, #003399);
+}
+
+.lock-body {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-card-container {
+    display: flex;
+    width: 60%;
+    max-width: 600px;
+    align-items: center;
+}
+
+.user-card.left-side {
+    flex: 1;
+    text-align: right;
+    padding-right: 20px;
+    border-right: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.user-card.right-side {
+    flex: 2;
+    padding-left: 20px;
+}
+
+.user-row {
+    display: flex;
+    align-items: center;
+    background: transparent;
+}
+
+.user-icon {
+    width: 64px;
+    height: 64px;
+    border: 2px solid white;
+    border-radius: 4px;
+    margin-right: 15px;
+    object-fit: cover;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    color: white;
+    font-size: 18px;
+    margin-bottom: 5px;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+#password-input {
+    border: 1px solid #4a6b9c;
+    border-radius: 3px;
+    padding: 3px 5px;
+    font-size: 14px;
+    width: 150px;
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+#login-btn {
+    background: #009933;
+    /* Green go button */
+    background: linear-gradient(to bottom, #1eb74e 0%, #009933 100%);
+    border: 1px solid #fff;
+    border-radius: 3px;
+    color: white;
+    width: 25px;
+    height: 25px;
+    margin-left: 5px;
+    cursor: pointer;
+    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#login-btn:hover {
+    background: linear-gradient(to bottom, #2bd461 0%, #00b33c 100%);
+}
+
+#error-msg {
+    color: #ffd700;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.forgot-password {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+    margin-top: 8px;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.2s;
+}
+
+.forgot-password:hover {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.lock-footer {
+    height: 15%;
+    display: flex;
+    align-items: center;
+    padding-left: 50px;
+    background: linear-gradient(to top, #001f5f, transparent);
+}
+
+.turn-off-btn {
+    display: flex;
+    align-items: center;
+    color: white;
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.turn-off-btn:hover {
+    opacity: 1;
+}
+
+.icon-off {
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(to bottom, #e2944b 0%, #d63f27 100%);
+    margin-right: 10px;
+    border-radius: 3px;
+    border: 1px solid white;
+}
+
+/* --- DESKTOP --- */
+#desktop {
+    background: url('https://upload.wikimedia.org/wikipedia/en/2/27/Bliss_%28Windows_XP%29.png') no-repeat center center fixed;
+    background-size: cover;
+    background-color: #55aaff;
+}
+
+/* Desktop Icons */
+.desktop-icons {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100px;
+}
+
+.desktop-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 80px;
+    cursor: pointer;
+    text-align: center;
+}
+
+.desktop-icon:hover {
+    background-color: rgba(10, 85, 204, 0.3);
+    border: 1px solid rgba(10, 85, 204, 0.5);
+    border-radius: 2px;
+}
+
+.desktop-icon span {
+    color: white;
+    text-shadow: 1px 1px 2px black;
+    margin-top: 5px;
+    font-size: 12px;
+}
+
+.icon-img {
+    width: 48px;
+    height: 48px;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.file-explorer-icon {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/e/ec/Windows_Explorer_Icon_%28Windows_XP%29.png');
+    background-color: #FFE681;
+    /* Fallback */
+}
+
+.police-icon {
+    background-color: #1a1a1a;
+    border: 2px solid #ccc;
+    box-shadow: 2px 2px 4px black;
+    position: relative;
+    border-radius: 4px;
+}
+
+.police-icon::after {
+    content: "TP";
+    color: red;
+    font-family: Impact, sans-serif;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 20px;
+    text-shadow: 0 0 2px black;
+}
+
+.ie-icon {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/1/1b/Internet_Explorer_6_logo.png');
+    background-color: #3b90d1;
+    /* Fallback */
+    border-radius: 50%;
+}
+
+/* --- WINDOWS --- */
+.window {
+    position: absolute;
+    top: 50px;
+    left: 200px;
+    width: 600px;
+    height: 400px;
+    background: #ece9d8;
+    border: 1px solid #0055ea;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+    overflow: hidden;
+    font-family: 'Tahoma', sans-serif;
+}
+
+.window.active {
+    z-index: 20;
+}
+
+.title-bar {
+    background: linear-gradient(to bottom, #0058ee 0%, #3593ff 4%, #288eff 18%, #127dff 44%, #0369fc 100%);
+    height: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 5px;
+    border-radius: 6px 6px 0 0;
+    color: white;
+    font-weight: bold;
+    text-shadow: 1px 1px 1px black;
+    cursor: default;
+    flex-shrink: 0;
+}
+
+.title-bar-text {
+    margin-left: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 13px;
+}
+
+.title-bar-controls {
+    display: flex;
+}
+
+.title-bar-controls button {
+    width: 21px;
+    height: 21px;
+    margin-left: 2px;
+    border: 1px solid #fff;
+    border-radius: 3px;
+    background: linear-gradient(to bottom, #fff 0%, #ece9d8 100%);
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0;
+    line-height: 18px;
+    /* Center text */
+    box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+.title-bar-controls button:active {
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.title-bar-controls .close-btn {
+    background: linear-gradient(to bottom, #e06c60 0%, #d83b32 100%);
+    color: white;
+    border-color: #f7a29b;
+}
+
+/* Common Window UI (Menus, Toolbars) */
+.menubar {
+    background: #ece9d8;
+    padding: 2px 5px;
+    border-bottom: 1px solid #d1d1d1;
+    font-size: 11px;
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.menubar span {
+    padding: 2px 5px;
+    cursor: default;
+}
+
+.menubar span:hover {
+    background-color: #316ac5;
+    color: white;
+}
+
+.toolbar {
+    background: #ece9d8;
+    border-bottom: 1px solid #d1d1d1;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 5px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.tool-btn:hover {
+    border: 1px solid #ccc;
+    background-color: #f7f7f7;
+    box-shadow: inset 0 0 2px white;
+}
+
+/* Placeholder Icons for Toolbar */
+.tool-btn::before {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background-color: #aaa;
+    /* Fallback */
+    background-size: cover;
+}
+
+.back-btn::before {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/2/22/Gnome-go-previous.svg');
+}
+
+.forward-btn::before {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/a/ac/Gnome-go-next.svg');
+}
+
+.stop-btn::before {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/e/e4/Gnome-process-stop.svg');
+}
+
+.refresh-btn::before {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/c/ce/Gnome-view-refresh.svg');
+}
+
+.home-btn::before {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/3/30/Gnome-go-home.svg');
+}
+
+.folders-btn::before {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/5/5b/Gnome-folder-open.svg');
+}
+
+.search-btn::before {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/1/14/Gnome-system-search.svg');
+}
+
+.separator {
+    width: 1px;
+    height: 20px;
+    background: #aaa;
+    margin: 0 5px;
+}
+
+.address-bar-row {
+    background: #ece9d8;
+    padding: 2px 5px 5px 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    border-bottom: 1px solid #d1d1d1;
+    flex-shrink: 0;
+}
+
+.address-label {
+    color: #444;
+}
+
+.address-input-wrapper {
+    flex: 1;
+    background: white;
+    border: 1px solid #7f9db9;
+    display: flex;
+    align-items: center;
+}
+
+.address-input {
+    width: 100%;
+    border: none;
+    padding: 3px;
+    font-family: inherit;
+    font-size: 11px;
+    outline: none;
+}
+
+.go-btn {
+    background: #399127;
+    color: white;
+    border: 1px solid white;
+    padding: 2px 8px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.window-body {
+    flex: 1;
+    display: flex;
+    padding: 0;
+    position: relative;
+    border: none;
+    background-color: #ece9d8;
+    overflow: hidden;
+}
+
+/* Explorer Specifics */
+.explorer-sidebar {
+    width: 200px;
+    background: linear-gradient(to bottom, #7ba2e7 0%, #6375d6 100%);
+    padding: 10px;
+    overflow-y: auto;
+    border-right: 1px solid #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.sidebar-box {
+    background: white;
+    /* Fallback for body */
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.box-header {
+    background: linear-gradient(to right, #fff 0%, #c6d3f7 100%);
+    padding: 5px 10px;
+    color: #215dc6;
+    font-weight: bold;
+    font-size: 11px;
+    cursor: pointer;
+    position: relative;
+    border-radius: 5px 5px 0 0;
+    display: flex;
+    justify-content: space-between;
+}
+
+.box-header::after {
+    content: '^';
+    font-family: monospace;
+    font-weight: bold;
+}
+
+.box-content {
+    background: #d6dff7;
+    padding: 10px;
+    font-size: 11px;
+    color: #215dc6;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.task-item {
+    cursor: pointer;
+    padding-left: 15px;
+    position: relative;
+}
+
+.task-item:hover {
+    text-decoration: underline;
+    color: #444;
+}
+
+.task-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 3px;
+    width: 10px;
+    height: 10px;
+    /* Placeholder for bullet icon */
+    background: #215dc6;
+    border-radius: 2px;
+}
+
+.explorer-content {
+    flex: 1;
+    background: white;
+    padding: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 20px;
+    overflow-y: auto;
+    border-left: 1px solid #888;
+}
+
+.file-item {
+    width: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    text-align: center;
+}
+
+.file-item:hover {
+    background-color: #eef;
+    outline: 1px dotted #ccc;
+}
+
+.video-file-icon {
+    width: 48px;
+    height: 48px;
+    background: url('https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Crystal_Clear_mimetype_video.png/64px-Crystal_Clear_mimetype_video.png') center/cover no-repeat;
+    margin-bottom: 5px;
+}
+
+.file-item span {
+    font-size: 12px;
+    word-break: break-word;
+}
+
+/* Internet Explorer Iframe */
+.ie-body {
+    background: white;
+    position: relative;
+}
+
+#ie-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* Status Bar */
+.status-bar {
+    height: 22px;
+    background: #ece9d8;
+    border-top: 1px solid #d1d1d1;
+    display: flex;
+    align-items: center;
+    padding: 0 5px;
+    font-size: 11px;
+    gap: 10px;
+    color: #444;
+    flex-shrink: 0;
+}
+
+.status-item {
+    border-right: 1px solid #ccc;
+    padding-right: 10px;
+}
+
+/* Tokyo Police Styles */
+.app-body {
+    background: #0d1117;
+    /* Dark BG */
+    color: #0f0;
+    font-family: 'Courier New', Courier, monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Grid background effect */
+.app-body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        linear-gradient(rgba(0, 255, 0, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 0, 0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+}
+
+.police-login-form {
+    border: 2px solid #0f0;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+    background: rgba(0, 20, 0, 0.8);
+    position: relative;
+    z-index: 10;
+    width: 80%;
+}
+
+.police-login-form h2 {
+    margin-top: 0;
+    border-bottom: 1px solid #0f0;
+    padding-bottom: 10px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 5px #0f0;
+}
+
+.form-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 5px;
+    color: #8f8;
+}
+
+.police-login-form input {
+    background: #000;
+    border: 1px solid #0f0;
+    color: #0f0;
+    padding: 8px;
+    width: 100%;
+    font-family: inherit;
+    outline: none;
+}
+
+.police-login-form input:focus {
+    box-shadow: 0 0 5px #0f0;
+}
+
+.police-btn {
+    background: #003300;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 10px 20px;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-top: 10px;
+    transition: all 0.2s;
+}
+
+.police-btn:hover {
+    background: #0f0;
+    color: #000;
+    box-shadow: 0 0 10px #0f0;
+}
+
+/* --- TASKBAR --- */
+.taskbar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 30px;
+    background: linear-gradient(to bottom, #245edb 0%, #3f8cf3 9%, #245edb 18%, #245edb 92%, #1941a5 100%);
+    display: flex;
+    align-items: center;
+    z-index: 2000;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    padding-right: 2px;
+}
+
+.start-button {
+    height: 30px;
+    background: linear-gradient(to bottom, #388e3c 0%, #5cbc5a 15%, #388e3c 100%);
+    border: none;
+    border-radius: 0 12px 12px 0;
+    color: white;
+    font-style: italic;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 0 15px 0 8px;
+    display: flex;
+    align-items: center;
+    box-shadow: 2px 0 2px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    margin-right: 10px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+}
+
+.start-button:hover {
+    filter: brightness(1.1);
+}
+
+.windows-logo {
+    width: 18px;
+    height: 18px;
+    background: radial-gradient(circle, #fff 10%, transparent 10%),
+        conic-gradient(from 0deg, #f34f1c 25%, #7fbc00 50%, #ffba01 75%, #01a6f0 100%);
+    border-radius: 50%;
+    margin-right: 5px;
+    background-size: 100% 100%;
+}
+
+.taskbar-divider {
+    width: 2px;
+    height: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    margin-right: 5px;
+}
+
+.taskbar-apps {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+
+/* System Tray */
+.system-tray {
+    background: #0b7dae;
+    /* Tray blue */
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    border-left: 1px solid #1c689e;
+    box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2);
+    color: white;
+    font-size: 11px;
+}
+
+/* Video Overlay */
+#video-player-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: black;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#video-player-container button {
+    margin-top: 10px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+#notepad-content {
+    user-select: text !important;
+    cursor: text;
+}
+
+/* Calculator Redesign */
+.calc-body {
+    padding: 10px;
+    background: #d4d0c8;
+    /* XP Dialog Color */
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.calc-display {
+    background: white;
+    border: 2px inset #fff;
+    padding: 10px;
+    margin-bottom: 10px;
+    text-align: right;
+    font-size: 24px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    min-height: 48px;
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.calc-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    flex-grow: 1;
+}
+
+.calc-btn {
+    padding: 0;
+    font-size: 16px;
+    border: 1px solid #003c74;
+    border-radius: 3px;
+    background: linear-gradient(to bottom, #fff 0%, #e6e6e6 100%);
+    color: black;
+    cursor: pointer;
+    box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.1);
+    transition: all 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.calc-btn:active {
+    background: linear-gradient(to bottom, #dcdcdc 0%, #fff 100%);
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.2);
+    transform: translateY(1px);
+}
+
+.calc-btn-op {
+    color: blue;
+    font-weight: bold;
+}
+
+.calc-btn-action {
+    color: #c00;
+}
+
+.calc-btn-equals {
+    background: linear-gradient(to bottom, #ffc000 0%, #ff9900 100%);
+    grid-row: span 2;
+    border-color: #995500;
+}
+
+.calc-btn-zero {
+    grid-column: span 2;
+}
+
+/* --- HINT CARDS --- */
+#hint-container {
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    z-index: 30000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 15px;
+    pointer-events: none;
+    max-width: 400px;
+}
+
+.hint-card {
+    background: rgba(13, 17, 23, 0.88);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 2px solid #3b82f6;
+    border-radius: 12px;
+    padding: 20px;
+    color: #e2e8f0;
+    box-shadow: 
+        0 10px 15px -3px rgba(0, 0, 0, 0.5),
+        0 4px 6px -2px rgba(0, 0, 0, 0.4),
+        0 0 20px rgba(59, 130, 246, 0.15);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: auto;
+    animation: hintIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 100%;
+    transform-origin: top right;
+}
+
+@keyframes hintIn {
+    from { 
+        transform: translateX(100px) scale(0.9); 
+        opacity: 0; 
+    }
+    to { 
+        transform: translateX(0) scale(1); 
+        opacity: 1; 
+    }
+}
+
+.hint-card.removing {
+    transform: translateX(50px) scale(0.95);
+    opacity: 0;
+}
+
+.hint-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 10px;
+    margin-bottom: 4px;
+}
+
+.hint-title {
+    font-weight: 800;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #3b82f6;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Inter', system-ui, sans-serif;
+}
+
+.hint-title i {
+    font-size: 14px;
+}
+
+.hint-close {
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    font-size: 14px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.hint-close:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.hint-body {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #cbd5e1;
+    white-space: pre-wrap;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.hint-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: rgba(148, 163, 184, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+}
+
+.hint-type-tag {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+}
